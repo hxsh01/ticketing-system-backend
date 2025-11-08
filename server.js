@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { Server } = require('socket.io');
+const {cors} = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -15,6 +16,15 @@ const seedMovies = require('./utils/seedMovies');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: true, credentials: true } });
+
+// ✅ Allow specific origins
+app.use(cors({
+  origin: ["http://localhost:3000"],  // frontend URLs
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true, // if you're sending cookies or auth headers
+}));
+
+app.use(express.json());
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
