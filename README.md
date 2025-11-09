@@ -37,7 +37,7 @@ yarn
 
 3. to start the server:
 ```bash
-node index.js
+node server.js
 ```
 
 The command will start server on port 4000.
