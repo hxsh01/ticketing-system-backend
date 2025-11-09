@@ -21,7 +21,7 @@ router.post('/signup', async (req, res) => {
     const user = await User.create({ name, email, passwordHash: hash });
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, sameSite: 'none', secure: false });
+    res.cookie('token', token, { httpOnly: true, sameSite: 'none', secure: true });
 
     res.json({ user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
@@ -46,7 +46,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'invalid' });
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, sameSite: 'none', secure: false });
+    res.cookie('token', token, { httpOnly: true, sameSite: 'none', secure: true });
 
     res.json({ user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
