@@ -13,38 +13,86 @@ async function emitMovieUpdate(movieId){
   ioInstance.to('movie:'+movieId).emit('movie:update', movie);
   ioInstance.emit('movie:update', movie);
 }
-async function reserveSeats(userId, movieId, seatIds){
+
+async function reserveSeats(userId, movieId, seatIds) {
   const movie = await Movie.findById(movieId);
   if (!movie) throw new Error('movie not found');
+
   const now = new Date();
-  for (const sid of seatIds){
+
+  // Validate seat availability
+  for (const sid of seatIds) {
     const seat = movie.seats.id(sid);
     if (!seat) throw new Error('seat id invalid');
     if (seat.isBooked) throw new Error('already booked');
-    if (seat.isReserved && seat.reservedBy && seat.reservedBy.toString() !== userId) {
-      if (seat.reservedUntil && new Date(seat.reservedUntil) > now) throw new Error('seat reserved by someone else');
+
+    // If reserved by another user and still valid -> cannot reserve
+    if (
+      seat.isReserved &&
+      seat.reservedBy &&
+      seat.reservedBy.toString() !== userId &&
+      seat.reservedUntil &&
+      new Date(seat.reservedUntil) > now
+    ) {
+      throw new Error('seat reserved by someone else');
     }
   }
+
   const reservedUntil = new Date(Date.now() + RES_MS);
-  for (const sid of seatIds){
+  let changed = false;
+
+  // Apply reservation or extend existing ones
+  for (const sid of seatIds) {
     const seat = movie.seats.id(sid);
-    seat.isReserved = true; seat.reservedBy = userId; seat.reservedUntil = reservedUntil;
+
+    // If the same user already reserved it, just extend time
+    if (
+      seat.isReserved &&
+      seat.reservedBy &&
+      seat.reservedBy.toString() === userId
+    ) {
+      seat.reservedUntil = reservedUntil;
+    } else {
+      // Otherwise create a new reservation
+      seat.isReserved = true;
+      seat.reservedBy = userId;
+      seat.reservedUntil = reservedUntil;
+    }
+    changed = true;
   }
-  await movie.save();
-  setTimeout(async ()=>{
+
+  if (changed) await movie.save();
+
+  // Schedule cleanup after timeout
+  setTimeout(async () => {
     const m = await Movie.findById(movieId);
     const now2 = new Date();
-    let changed = false;
-    for (const s of m.seats){
-      if (s.isReserved && !s.isBooked && s.reservedUntil && new Date(s.reservedUntil) <= now2){
-        s.isReserved = false; s.reservedBy = null; s.reservedUntil = null; changed = true;
+    let changed2 = false;
+
+    for (const s of m.seats) {
+      if (
+        s.isReserved &&
+        !s.isBooked &&
+        s.reservedUntil &&
+        new Date(s.reservedUntil) <= now2
+      ) {
+        s.isReserved = false;
+        s.reservedBy = null;
+        s.reservedUntil = null;
+        changed2 = true;
       }
     }
-    if (changed){ await m.save(); emitMovieUpdate(movieId); }
+
+    if (changed2) {
+      await m.save();
+      emitMovieUpdate(movieId);
+    }
   }, RES_MS + 50);
+
   await emitMovieUpdate(movieId);
   return { reservedUntil };
 }
+
 async function bookSeats(userId, movieId, seatIds){
   const movie = await Movie.findById(movieId);
   const now = new Date();
