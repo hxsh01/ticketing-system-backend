@@ -3,8 +3,7 @@ module.exports = async function seed(){
   const count = await Movie.countDocuments();
   if (count > 0) return;
   const movies = [
-    { title: 'Avengers: Endgame' },
-    { title: 'Inception' }
+    { title: 'Avengers: Endgame' }
   ];
   const rows = 'ABCDEFGH'.split('');
   for (const m of movies){
